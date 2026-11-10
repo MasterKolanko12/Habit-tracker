@@ -3,33 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Śledzenie Nawyków i Dnia</title>
+    <title>Mój dzień</title>
+    
+    <link rel="apple-touch-icon" href="icon.jpg">
+    <link rel="icon" type="image/jpeg" sizes="192x192" href="icon.jpg">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; 
+            color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+        }
         .table-container {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; 
         }
+        .table-container::-webkit-scrollbar {
+            display: none;
+        }
+        
         th:first-child, td:first-child {
             position: sticky;
             left: 0;
-            background-color: #ffffff;
+            background-color: #1e293b; 
             z-index: 10;
-            border-right: 2px solid #e5e7eb;
-            min-width: 170px;
+            min-width: 175px;
+            box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.4);
         }
         th:first-child {
-            background-color: #f3f4f6;
+            background-color: #0f172a; 
             z-index: 11;
         }
+        
         td.cell-day {
             cursor: pointer;
             text-align: center;
             user-select: none;
             min-width: 45px;
-            height: 40px;
+            height: 48px;
+            transition: background-color 0.2s;
         }
+        td.cell-day:active {
+            background-color: #334155; 
+        }
+        
         select {
             -webkit-appearance: none;
             -moz-appearance: none;
@@ -37,78 +63,181 @@
             text-align: center;
             text-align-last: center;
         }
+        select option {
+            background-color: #1e293b;
+            color: #f8fafc;
+        }
+
+        /* Klasy dla modali i menu */
+        .glass-overlay {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+        }
     </style>
 </head>
-<body class="bg-gray-100 p-2 md:p-6 text-gray-800">
+<body class="antialiased p-3 md:p-8">
 
-    <div class="max-w-6xl mx-auto space-y-6">
+    <div class="max-w-6xl mx-auto space-y-6 md:space-y-8">
         
-        <div class="bg-white p-4 rounded-xl shadow flex flex-col sm:flex-row justify-between items-center gap-4">
-            <h1 class="text-2xl font-bold">Twój Tracker Nawyków</h1>
-            <div class="flex items-center gap-2">
-                <label for="monthSelect" class="font-medium text-gray-700">Wybierz miesiąc:</label>
-                <input type="month" id="monthSelect" class="border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        <!-- Sekcja Nagłówka z Menu, Tytułem i Statystykami -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mt-2 mb-2">
+            
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <!-- Przycisk Menu Hamburger -->
+                <button onclick="toggleMenu()" class="p-2 bg-slate-800 rounded-lg border border-slate-700 hover:bg-slate-700 transition-colors focus:outline-none shadow-lg">
+                    <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+                <h1 class="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400 tracking-tight">
+                    Mój dzień
+                </h1>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <!-- Wskaźnik procentowy -->
+                <div class="flex items-center gap-2 bg-violet-900/40 px-4 py-2 rounded-full border border-violet-700/50 shadow-lg">
+                    <span class="text-xs text-violet-300 font-medium">Ukończono:</span>
+                    <span id="monthlyPercentage" class="text-sm font-bold text-violet-200">0%</span>
+                </div>
+                
+                <div class="flex items-center gap-2 bg-slate-800 px-4 py-2 rounded-full shadow-lg border border-slate-700">
+                    <label for="monthSelect" class="font-medium text-sm text-slate-400">Miesiąc:</label>
+                    <input type="month" id="monthSelect" class="bg-transparent font-semibold text-slate-200 focus:outline-none cursor-pointer" style="color-scheme: dark;">
+                </div>
             </div>
         </div>
 
-        <div class="bg-white p-4 rounded-xl shadow">
-            <h2 class="text-xl font-bold mb-4 border-b pb-2">TABELA ZADAŃ I SAMOPOCZUCIA</h2>
-            <div class="table-container border rounded">
+        <!-- Główna Tabela -->
+        <div class="bg-slate-800 p-4 md:p-6 rounded-3xl shadow-xl border border-slate-700/50">
+            <h2 class="text-lg font-bold text-slate-200 mb-4">Tabela zadań</h2>
+            
+            <div class="table-container border border-slate-700 rounded-2xl bg-slate-800">
                 <table class="w-full text-sm border-collapse">
                     <thead>
-                        <tr class="bg-gray-100 border-b" id="habit-thead-tr">
+                        <tr class="bg-slate-900/50 border-b border-slate-700 text-slate-400 text-xs uppercase tracking-wider" id="habit-thead-tr">
+                            <!-- Nagłówki dni -->
                         </tr>
                     </thead>
                     <tbody id="habit-tbody">
+                        <!-- Wiersze nawyków, oceny i notatek -->
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <div class="bg-white p-4 rounded-xl shadow">
-            <h2 class="text-xl font-bold mb-4 border-b pb-2">WYKRES SAMOPOCZUCIA</h2>
+        <!-- Sekcja Wykresu -->
+        <div class="bg-slate-800 p-4 md:p-6 rounded-3xl shadow-xl border border-slate-700/50">
+            <h2 class="text-lg font-bold text-slate-200 mb-4">Wykres samopoczucia</h2>
             <div class="w-full overflow-x-auto">
-                <div style="min-width: 600px;">
-                    <canvas id="dayChart" height="200"></canvas>
+                <div style="min-width: 600px; padding-top: 10px;">
+                    <canvas id="dayChart" height="220"></canvas>
                 </div>
             </div>
         </div>
 
+        <div class="text-center text-slate-500 text-xs pb-6 font-medium">
+            Stay consistent. Keep growing.
+        </div>
+    </div>
+
+    <!-- ================= MODALE I MENU ================= -->
+
+    <!-- Menu Boczne (Zasłona i Panel) -->
+    <div id="sideMenuOverlay" class="fixed inset-0 glass-overlay z-40 hidden transition-opacity" onclick="toggleMenu()"></div>
+    <div id="sideMenu" class="fixed top-0 left-0 h-full w-72 bg-slate-900 border-r border-slate-700 z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
+        <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+            <h2 class="text-xl font-bold text-violet-400">Menu</h2>
+            <button onclick="toggleMenu()" class="text-slate-400 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div class="p-4 flex-1">
+            <button onclick="openHabitManager(); toggleMenu()" class="w-full flex items-center gap-3 p-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-200 font-medium transition-colors border border-slate-700">
+                <svg class="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                Edytuj nawyki
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal: Menedżer Nawyków -->
+    <div id="habitModal" class="fixed inset-0 glass-overlay z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 w-full max-w-md rounded-3xl shadow-2xl border border-slate-700 p-6 flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-slate-200">Zarządzaj nawykami</h2>
+                <button onclick="closeHabitManager()" class="text-slate-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto mb-4 pr-2 space-y-2" id="habitListContainer">
+                <!-- Lista nawyków generowana z JS -->
+            </div>
+            
+            <div class="flex gap-2 mb-6 border-t border-slate-700 pt-4">
+                <input type="text" id="newHabitInput" placeholder="Nowe zadanie..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-slate-200 focus:outline-none focus:border-violet-500">
+                <button onclick="addHabit()" class="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl font-medium transition-colors">+</button>
+            </div>
+            
+            <button onclick="closeHabitManager()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-xl font-bold transition-colors">
+                Gotowe
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal: Notatka -->
+    <div id="noteModal" class="fixed inset-0 glass-overlay z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 w-full max-w-sm rounded-3xl shadow-2xl border border-slate-700 p-6">
+            <h2 class="text-lg font-bold text-slate-200 mb-4" id="noteModalTitle">Notatka do dnia</h2>
+            <textarea id="noteInput" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-200 focus:outline-none focus:border-violet-500 mb-4 resize-none" placeholder="Jak minął dzień?..."></textarea>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeNoteModal()" class="px-4 py-2 text-slate-400 hover:text-white font-medium transition-colors">Anuluj</button>
+                <button onclick="saveNote()" class="bg-violet-600 hover:bg-violet-500 text-white px-5 py-2 rounded-xl font-medium transition-colors">Zapisz</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        const habits = [
-            "Pobudka 7:00",
-            "Medytacja",
-            "Trening",
-            "Nauka",
-            "Książka",
-            "Brak telefonu przed spaniem",
-            "Brak śmieciowego jedzenia", 
-            "Sen 22:30"
+        // Domyślna lista na wypadek pierwszego uruchomienia
+        const defaultHabits = [
+            "Pobudka 7:00", "Medytacja", "Trening", "Nauka", 
+            "Książka", "Brak telefonu przed spaniem", "Brak śmieciowego jedzenia", "Sen 22:30"
         ];
 
         let chartInstance = null;
+        let activeNoteDay = null; // Przechowuje dzień, dla którego otworzyliśmy notatkę
 
+        // Ładowanie listy nawyków (Złota zasada: używaj zapisanych, a jak nie ma, weź domyślne)
+        function getHabitList() {
+            const saved = localStorage.getItem('userHabitList');
+            return saved ? JSON.parse(saved) : defaultHabits;
+        }
+
+        function saveHabitList(list) {
+            localStorage.setItem('userHabitList', JSON.stringify(list));
+        }
+
+        // Główne dane (Tabela)
         function loadData() {
-            const data = localStorage.getItem('habitTrackerDataV3');
+            const data = localStorage.getItem('habitTrackerDataDark');
             return data ? JSON.parse(data) : {};
         }
 
         function saveData(data) {
-            localStorage.setItem('habitTrackerDataV3', JSON.stringify(data));
+            localStorage.setItem('habitTrackerDataDark', JSON.stringify(data));
         }
 
         function getDaysInMonth(year, month) {
             return new Date(year, month, 0).getDate();
         }
 
-        function getMoodScores(monthKey, numDays) {
+        // ================= LOGIKA WYKRESU I PROCENTÓW =================
+        function updateStatsAndChart(monthKey, numDays) {
             const appData = loadData();
-            const monthData = appData[monthKey] || {};
+            const monthData = appData[monthKey] || { habits: {}, mood: {}, notes: {} };
+            const habits = getHabitList();
+            
+            // 1. Aktualizacja Wykresu
             const moodData = monthData.mood || {};
             const scores = [];
-
             for (let day = 1; day <= numDays; day++) {
                 if (moodData[day] && moodData[day] !== "") {
                     scores.push(parseInt(moodData[day]));
@@ -116,11 +245,6 @@
                     scores.push(null);
                 }
             }
-            return scores;
-        }
-
-        function updateChart(monthKey, numDays) {
-            const scores = getMoodScores(monthKey, numDays);
             const labels = Array.from({length: numDays}, (_, i) => i + 1);
 
             if (chartInstance) {
@@ -129,6 +253,10 @@
                 chartInstance.update();
             } else {
                 const ctx = document.getElementById('dayChart').getContext('2d');
+                let gradient = ctx.createLinearGradient(0, 0, 0, 250);
+                gradient.addColorStop(0, 'rgba(167, 139, 250, 0.4)'); 
+                gradient.addColorStop(1, 'rgba(167, 139, 250, 0.0)'); 
+
                 chartInstance = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -136,154 +264,170 @@
                         datasets: [{
                             label: 'Samopoczucie',
                             data: scores,
-                            borderColor: '#3b82f6', 
-                            backgroundColor: '#3b82f6',
-                            borderWidth: 2,
+                            borderColor: '#a78bfa', 
+                            backgroundColor: gradient,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#0f172a', 
+                            pointBorderColor: '#a78bfa',
+                            pointBorderWidth: 2,
                             pointRadius: 4,
                             pointHoverRadius: 6,
-                            tension: 0.3,
+                            tension: 0.4,
+                            fill: true,
                             spanGaps: true
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        layout: { padding: { left: -5 } },
                         scales: {
                             x: {
-                                ticks: {
-                                    callback: function(val, index) {
-                                        let day = index + 1;
-                                        return day % 2 !== 0 ? day : '';
-                                    }
-                                }
+                                grid: { display: false, drawBorder: false },
+                                ticks: { font: { family: 'Inter', size: 11 }, color: '#64748b', callback: function(val, index) { let day = index + 1; return day % 2 !== 0 ? day : ''; } }
                             },
                             y: {
-                                min: 1,
-                                max: 10,
-                                ticks: {
-                                    stepSize: 3,
-                                    autoSkip: false, // Blokuje chowanie etykiet przez Chart.js na małych ekranach
-                                    callback: function(value) {
-                                        if (value === 10) return 'Bardzo dobrze';
-                                        if (value === 7) return 'Dobrze';
-                                        if (value === 4) return 'Średnio';
-                                        if (value === 1) return 'Słabo';
-                                        return ''; 
-                                    }
-                                }
+                                min: 1, max: 10,
+                                grid: { color: '#334155', drawBorder: false }, 
+                                border: { dash: [4, 4] },
+                                ticks: { stepSize: 3, autoSkip: false, font: { family: 'Inter', size: 12, weight: '500' }, color: '#94a3b8', padding: 10, callback: function(v) { if(v===10)return 'Bardzo dobrze'; if(v===7)return 'Dobrze'; if(v===4)return 'Średnio'; if(v===1)return 'Słabo'; return ''; } }
                             }
                         },
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    title: function(context) {
-                                        return 'Dzień ' + context[0].label;
-                                    },
-                                    label: function(context) {
-                                        let v = context.parsed.y;
-                                        let text = 'Ocena: ' + v + '/10';
-                                        return text;
-                                    }
-                                }
-                            }
-                        }
+                        plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.95)', titleFont: { family: 'Inter', size: 13 }, bodyFont: { family: 'Inter', size: 14, weight: 'bold' }, padding: 12, cornerRadius: 8, displayColors: false } }
                     }
                 });
             }
+
+            // 2. Aktualizacja Procentów
+            let totalPossible = numDays * habits.length;
+            let totalDone = 0;
+            
+            if (habits.length > 0) {
+                for (let day = 1; day <= numDays; day++) {
+                    if (monthData.habits && monthData.habits[day]) {
+                        for (let h = 0; h < habits.length; h++) {
+                            if (monthData.habits[day][h] === "✔️") {
+                                totalDone++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            let percent = totalPossible === 0 ? 0 : Math.round((totalDone / totalPossible) * 100);
+            document.getElementById('monthlyPercentage').innerText = percent + '%';
         }
 
+        // ================= GŁÓWNY RENDER TABELI =================
         function renderTracker() {
             const monthSelect = document.getElementById('monthSelect');
             const monthKey = monthSelect.value;
             const [year, month] = monthKey.split('-');
             const numDays = getDaysInMonth(parseInt(year), parseInt(month));
+            const habits = getHabitList();
 
             const appData = loadData();
-            if (!appData[monthKey]) {
-                appData[monthKey] = { habits: {}, mood: {} };
-            }
+            if (!appData[monthKey]) appData[monthKey] = { habits: {}, mood: {}, notes: {} };
             if (!appData[monthKey].habits) appData[monthKey].habits = {};
             if (!appData[monthKey].mood) appData[monthKey].mood = {};
+            if (!appData[monthKey].notes) appData[monthKey].notes = {};
 
             const theadTr = document.getElementById('habit-thead-tr');
-            theadTr.innerHTML = '<th class="p-2 text-left">Zadanie / Dzień</th>';
+            theadTr.innerHTML = '<th class="p-3 font-semibold text-left border-r border-slate-700">Zadanie / Dzień</th>';
             for (let i = 1; i <= numDays; i++) {
-                theadTr.innerHTML += `<th class="p-2 border-r border-gray-200">${i}</th>`;
+                theadTr.innerHTML += `<th class="p-3 border-r border-slate-700 font-semibold">${i}</th>`;
             }
 
             const tbody = document.getElementById('habit-tbody');
             tbody.innerHTML = '';
 
+            // Renderowanie Zadań
             habits.forEach((habit, habitIndex) => {
                 const tr = document.createElement('tr');
-                tr.className = "border-b border-gray-100 hover:bg-gray-50";
+                tr.className = "border-b border-slate-700 hover:bg-slate-700/30 transition-colors";
                 
                 const tdName = document.createElement('td');
-                tdName.className = "p-2 font-medium text-xs md:text-sm shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]";
+                tdName.className = "p-3 font-medium text-sm text-slate-300 border-r border-slate-700";
                 tdName.innerText = habit;
                 tr.appendChild(tdName);
 
                 for (let day = 1; day <= numDays; day++) {
                     const tdDay = document.createElement('td');
-                    tdDay.className = "p-2 border-r border-gray-100 cell-day text-lg";
+                    tdDay.className = "p-2 border-r border-slate-700 cell-day text-lg";
                     
-                    if (!appData[monthKey].habits[day]) {
-                        appData[monthKey].habits[day] = Array(habits.length).fill("");
-                    }
+                    if (!appData[monthKey].habits[day]) appData[monthKey].habits[day] = [];
                     
-                    tdDay.innerText = appData[monthKey].habits[day][habitIndex];
+                    let val = appData[monthKey].habits[day][habitIndex] || "";
+                    tdDay.innerHTML = val === "✔️" ? '<span class="text-emerald-400">✔️</span>' : (val === "❌" ? '<span class="text-rose-400">✖</span>' : '');
                     
                     tdDay.onclick = function() {
-                        let currentState = this.innerText;
-                        let newState = "";
-                        
-                        if (currentState === "") newState = "✔️";
-                        else if (currentState === "✔️") newState = "❌";
-                        else newState = "";
-                        
-                        this.innerText = newState;
-                        
                         const currentData = loadData();
+                        if (!currentData[monthKey]) currentData[monthKey] = { habits: {}, mood: {}, notes: {} };
+                        if (!currentData[monthKey].habits) currentData[monthKey].habits = {};
+                        if (!currentData[monthKey].habits[day]) currentData[monthKey].habits[day] = [];
+                        
+                        let currentState = currentData[monthKey].habits[day][habitIndex] || "";
+                        let newState = currentState === "" ? "✔️" : (currentState === "✔️" ? "❌" : "");
+                        
                         currentData[monthKey].habits[day][habitIndex] = newState;
                         saveData(currentData);
+                        
+                        this.innerHTML = newState === "✔️" ? '<span class="text-emerald-400">✔️</span>' : (newState === "❌" ? '<span class="text-rose-400">✖</span>' : '');
+                        updateStatsAndChart(monthKey, numDays); // Odświeża procent na żywo
                     };
                     tr.appendChild(tdDay);
                 }
                 tbody.appendChild(tr);
             });
 
+            // Renderowanie Notatek (Nowość)
+            const noteTr = document.createElement('tr');
+            noteTr.className = "bg-slate-800/80 hover:bg-slate-700/40 transition-colors border-b border-slate-700"; 
+            const tdNoteLabel = document.createElement('td');
+            tdNoteLabel.className = "p-3 font-medium text-slate-400 text-xs md:text-sm border-r border-slate-700";
+            tdNoteLabel.innerText = "Notatki 📝";
+            noteTr.appendChild(tdNoteLabel);
+
+            for (let day = 1; day <= numDays; day++) {
+                const tdNote = document.createElement('td');
+                tdNote.className = "p-0 border-r border-slate-700 cell-day text-sm";
+                
+                let hasNote = appData[monthKey].notes && appData[monthKey].notes[day] && appData[monthKey].notes[day].trim() !== "";
+                tdNote.innerHTML = hasNote ? '<span class="text-violet-400">📝</span>' : '<span class="text-slate-600 font-bold opacity-30">+</span>';
+                
+                tdNote.onclick = function() { openNoteModal(day); };
+                noteTr.appendChild(tdNote);
+            }
+            tbody.appendChild(noteTr);
+
+            // Renderowanie Oceny Dnia
             const moodTr = document.createElement('tr');
-            moodTr.className = "border-t-4 border-gray-400 bg-blue-50/30 hover:bg-blue-50"; 
-            
+            moodTr.className = "bg-violet-900/20 hover:bg-violet-900/30 transition-colors"; 
             const tdMoodLabel = document.createElement('td');
-            tdMoodLabel.className = "p-2 font-bold text-blue-700 text-xs md:text-sm shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]";
+            tdMoodLabel.className = "p-3 font-bold text-violet-400 text-xs md:text-sm border-r border-slate-700";
             tdMoodLabel.innerText = "Ocena dnia (1-10)";
             moodTr.appendChild(tdMoodLabel);
 
             for (let day = 1; day <= numDays; day++) {
                 const tdMood = document.createElement('td');
-                tdMood.className = "p-0 border-r border-gray-200 cell-day";
+                tdMood.className = "p-0 border-r border-slate-700/50 cell-day";
                 
                 const selectMood = document.createElement('select');
-                selectMood.className = "w-full h-full text-center bg-transparent cursor-pointer outline-none text-sm md:text-base font-bold text-blue-600";
-                
+                selectMood.className = "w-full h-full text-center bg-transparent cursor-pointer outline-none text-sm md:text-base font-bold text-violet-400 focus:bg-slate-700 transition-colors rounded";
                 selectMood.appendChild(new Option("-", ""));
-                for (let v = 1; v <= 10; v++) {
-                    selectMood.appendChild(new Option(v, v));
-                }
+                for (let v = 1; v <= 10; v++) selectMood.appendChild(new Option(v, v));
 
-                if (appData[monthKey].mood[day]) {
+                if (appData[monthKey].mood && appData[monthKey].mood[day]) {
                     selectMood.value = appData[monthKey].mood[day];
                 }
 
                 selectMood.onchange = function() {
                     const currentData = loadData();
+                    if (!currentData[monthKey]) currentData[monthKey] = { habits: {}, mood: {}, notes: {} };
+                    if (!currentData[monthKey].mood) currentData[monthKey].mood = {};
                     currentData[monthKey].mood[day] = this.value;
                     saveData(currentData);
-                    updateChart(monthKey, numDays);
+                    updateStatsAndChart(monthKey, numDays);
                 };
 
                 tdMood.appendChild(selectMood);
@@ -292,9 +436,114 @@
             tbody.appendChild(moodTr);
 
             saveData(appData);
-            updateChart(monthKey, numDays);
+            updateStatsAndChart(monthKey, numDays);
         }
 
+        // ================= OBSŁUGA MENU BOCZNEGO =================
+        function toggleMenu() {
+            const overlay = document.getElementById('sideMenuOverlay');
+            const menu = document.getElementById('sideMenu');
+            
+            if (menu.classList.contains('-translate-x-full')) {
+                overlay.classList.remove('hidden');
+                setTimeout(() => menu.classList.remove('-translate-x-full'), 10);
+            } else {
+                menu.classList.add('-translate-x-full');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+        }
+
+        // ================= OBSŁUGA NOTATEK =================
+        function openNoteModal(day) {
+            activeNoteDay = day;
+            const monthKey = document.getElementById('monthSelect').value;
+            const appData = loadData();
+            
+            document.getElementById('noteModalTitle').innerText = `Notatka: ${day} ${monthKey}`;
+            let existingNote = (appData[monthKey] && appData[monthKey].notes && appData[monthKey].notes[day]) ? appData[monthKey].notes[day] : "";
+            document.getElementById('noteInput').value = existingNote;
+            
+            document.getElementById('noteModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('noteInput').focus(), 100);
+        }
+
+        function closeNoteModal() {
+            document.getElementById('noteModal').classList.add('hidden');
+            activeNoteDay = null;
+        }
+
+        function saveNote() {
+            if (!activeNoteDay) return;
+            const text = document.getElementById('noteInput').value;
+            const monthKey = document.getElementById('monthSelect').value;
+            const currentData = loadData();
+            
+            if (!currentData[monthKey]) currentData[monthKey] = { habits: {}, mood: {}, notes: {} };
+            if (!currentData[monthKey].notes) currentData[monthKey].notes = {};
+            
+            currentData[monthKey].notes[activeNoteDay] = text;
+            saveData(currentData);
+            
+            closeNoteModal();
+            renderTracker(); 
+        }
+
+        // ================= OBSŁUGA ZARZĄDZANIA NAWYKAMI =================
+        function openHabitManager() {
+            document.getElementById('habitModal').classList.remove('hidden');
+            renderHabitManagerList();
+        }
+
+        function closeHabitManager() {
+            document.getElementById('habitModal').classList.add('hidden');
+            renderTracker(); // Odśwież główną tabelę nowymi nawykami
+        }
+
+        function renderHabitManagerList() {
+            const list = getHabitList();
+            const container = document.getElementById('habitListContainer');
+            container.innerHTML = '';
+            
+            list.forEach((habit, index) => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-slate-700";
+                
+                const span = document.createElement('span');
+                span.className = "text-slate-200 font-medium text-sm";
+                span.innerText = habit;
+                
+                const delBtn = document.createElement('button');
+                delBtn.innerHTML = '<svg class="w-5 h-5 text-rose-400 hover:text-rose-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>';
+                delBtn.onclick = () => deleteHabit(index);
+                
+                div.appendChild(span);
+                div.appendChild(delBtn);
+                container.appendChild(div);
+            });
+        }
+
+        function addHabit() {
+            const input = document.getElementById('newHabitInput');
+            const val = input.value.trim();
+            if (val !== "") {
+                const list = getHabitList();
+                list.push(val);
+                saveHabitList(list);
+                input.value = "";
+                renderHabitManagerList();
+            }
+        }
+
+        function deleteHabit(index) {
+            if(confirm("Czy na pewno chcesz usunąć ten nawyk?")) {
+                const list = getHabitList();
+                list.splice(index, 1);
+                saveHabitList(list);
+                renderHabitManagerList();
+            }
+        }
+
+        // ================= INICJALIZACJA =================
         document.addEventListener('DOMContentLoaded', () => {
             const monthSelect = document.getElementById('monthSelect');
             const today = new Date();
