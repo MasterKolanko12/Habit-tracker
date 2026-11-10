@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Śledzenie Nawyków i Dnia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        th:first-child, td:first-child {
+            position: sticky;
+            left: 0;
+            background-color: #ffffff;
+            z-index: 10;
+            border-right: 2px solid #e5e7eb;
+            min-width: 170px;
+        }
+        th:first-child {
+            background-color: #f3f4f6;
+            z-index: 11;
+        }
+        td.cell-day {
+            cursor: pointer;
+            text-align: center;
+            user-select: none;
+            min-width: 45px;
+            height: 40px;
+        }
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            text-align: center;
+            text-align-last: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-2 md:p-6 text-gray-800">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <div class="bg-white p-4 rounded-xl shadow flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h1 class="text-2xl font-bold">Twój Tracker Nawyków</h1>
+            <div class="flex items-center gap-2">
+                <label for="monthSelect" class="font-medium text-gray-700">Wybierz miesiąc:</label>
+                <input type="month" id="monthSelect" class="border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow">
+            <h2 class="text-xl font-bold mb-4 border-b pb-2">TABELA ZADAŃ I SAMOPOCZUCIA</h2>
+            <div class="table-container border rounded">
+                <table class="w-full text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 border-b" id="habit-thead-tr">
+                        </tr>
+                    </thead>
+                    <tbody id="habit-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow">
+            <h2 class="text-xl font-bold mb-4 border-b pb-2">WYKRES SAMOPOCZUCIA</h2>
+            <div class="w-full overflow-x-auto">
+                <div style="min-width: 600px;">
+                    <canvas id="dayChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const habits = [
+            "Pobudka 7:00",
+            "Medytacja",
+            "Trening",
+            "Nauka",
+            "Książka",
+            "Brak telefonu przed spaniem",
+            "Brak śmieciowego jedzenia", 
+            "Sen 22:30"
+        ];
+
+        let chartInstance = null;
+
+        function loadData() {
+            const data = localStorage.getItem('habitTrackerDataV3');
+            return data ? JSON.parse(data) : {};
+        }
+
+        function saveData(data) {
+            localStorage.setItem('habitTrackerDataV3', JSON.stringify(data));
+        }
+
+        function getDaysInMonth(year, month) {
+            return new Date(year, month, 0).getDate();
+        }
+
+        function getMoodScores(monthKey, numDays) {
+            const appData = loadData();
+            const monthData = appData[monthKey] || {};
+            const moodData = monthData.mood || {};
+            const scores = [];
+
+            for (let day = 1; day <= numDays; day++) {
+                if (moodData[day] && moodData[day] !== "") {
+                    scores.push(parseInt(moodData[day]));
+                } else {
+                    scores.push(null);
+                }
+            }
+            return scores;
+        }
+
+        function updateChart(monthKey, numDays) {
+            const scores = getMoodScores(monthKey, numDays);
+            const labels = Array.from({length: numDays}, (_, i) => i + 1);
+
+            if (chartInstance) {
+                chartInstance.data.labels = labels;
+                chartInstance.data.datasets[0].data = scores;
+                chartInstance.update();
+            } else {
+                const ctx = document.getElementById('dayChart').getContext('2d');
+                chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Samopoczucie',
+                            data: scores,
+                            borderColor: '#3b82f6', 
+                            backgroundColor: '#3b82f6',
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            tension: 0.3,
+                            spanGaps: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                ticks: {
+                                    callback: function(val, index) {
+                                        let day = index + 1;
+                                        return day % 2 !== 0 ? day : '';
+                                    }
+                                }
+                            },
+                            y: {
+                                min: 1,
+                                max: 10,
+                                ticks: {
+                                    stepSize: 3,
+                                    autoSkip: false, // Blokuje chowanie etykiet przez Chart.js na małych ekranach
+                                    callback: function(value) {
+                                        if (value === 10) return 'Bardzo dobrze';
+                                        if (value === 7) return 'Dobrze';
+                                        if (value === 4) return 'Średnio';
+                                        if (value === 1) return 'Słabo';
+                                        return ''; 
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(context) {
+                                        return 'Dzień ' + context[0].label;
+                                    },
+                                    label: function(context) {
+                                        let v = context.parsed.y;
+                                        let text = 'Ocena: ' + v + '/10';
+                                        return text;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function renderTracker() {
+            const monthSelect = document.getElementById('monthSelect');
+            const monthKey = monthSelect.value;
+            const [year, month] = monthKey.split('-');
+            const numDays = getDaysInMonth(parseInt(year), parseInt(month));
+
+            const appData = loadData();
+            if (!appData[monthKey]) {
+                appData[monthKey] = { habits: {}, mood: {} };
+            }
+            if (!appData[monthKey].habits) appData[monthKey].habits = {};
+            if (!appData[monthKey].mood) appData[monthKey].mood = {};
+
+            const theadTr = document.getElementById('habit-thead-tr');
+            theadTr.innerHTML = '<th class="p-2 text-left">Zadanie / Dzień</th>';
+            for (let i = 1; i <= numDays; i++) {
+                theadTr.innerHTML += `<th class="p-2 border-r border-gray-200">${i}</th>`;
+            }
+
+            const tbody = document.getElementById('habit-tbody');
+            tbody.innerHTML = '';
+
+            habits.forEach((habit, habitIndex) => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-100 hover:bg-gray-50";
+                
+                const tdName = document.createElement('td');
+                tdName.className = "p-2 font-medium text-xs md:text-sm shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]";
+                tdName.innerText = habit;
+                tr.appendChild(tdName);
+
+                for (let day = 1; day <= numDays; day++) {
+                    const tdDay = document.createElement('td');
+                    tdDay.className = "p-2 border-r border-gray-100 cell-day text-lg";
+                    
+                    if (!appData[monthKey].habits[day]) {
+                        appData[monthKey].habits[day] = Array(habits.length).fill("");
+                    }
+                    
+                    tdDay.innerText = appData[monthKey].habits[day][habitIndex];
+                    
+                    tdDay.onclick = function() {
+                        let currentState = this.innerText;
+                        let newState = "";
+                        
+                        if (currentState === "") newState = "✔️";
+                        else if (currentState === "✔️") newState = "❌";
+                        else newState = "";
+                        
+                        this.innerText = newState;
+                        
+                        const currentData = loadData();
+                        currentData[monthKey].habits[day][habitIndex] = newState;
+                        saveData(currentData);
+                    };
+                    tr.appendChild(tdDay);
+                }
+                tbody.appendChild(tr);
+            });
+
+            const moodTr = document.createElement('tr');
+            moodTr.className = "border-t-4 border-gray-400 bg-blue-50/30 hover:bg-blue-50"; 
+            
+            const tdMoodLabel = document.createElement('td');
+            tdMoodLabel.className = "p-2 font-bold text-blue-700 text-xs md:text-sm shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]";
+            tdMoodLabel.innerText = "Ocena dnia (1-10)";
+            moodTr.appendChild(tdMoodLabel);
+
+            for (let day = 1; day <= numDays; day++) {
+                const tdMood = document.createElement('td');
+                tdMood.className = "p-0 border-r border-gray-200 cell-day";
+                
+                const selectMood = document.createElement('select');
+                selectMood.className = "w-full h-full text-center bg-transparent cursor-pointer outline-none text-sm md:text-base font-bold text-blue-600";
+                
+                selectMood.appendChild(new Option("-", ""));
+                for (let v = 1; v <= 10; v++) {
+                    selectMood.appendChild(new Option(v, v));
+                }
+
+                if (appData[monthKey].mood[day]) {
+                    selectMood.value = appData[monthKey].mood[day];
+                }
+
+                selectMood.onchange = function() {
+                    const currentData = loadData();
+                    currentData[monthKey].mood[day] = this.value;
+                    saveData(currentData);
+                    updateChart(monthKey, numDays);
+                };
+
+                tdMood.appendChild(selectMood);
+                moodTr.appendChild(tdMood);
+            }
+            tbody.appendChild(moodTr);
+
+            saveData(appData);
+            updateChart(monthKey, numDays);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const monthSelect = document.getElementById('monthSelect');
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            monthSelect.value = `${yyyy}-${mm}`;
+
+            monthSelect.addEventListener('change', renderTracker);
+            renderTracker();
+        });
+    </script>
+</body>
+</html>
